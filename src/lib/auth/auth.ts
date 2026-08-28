@@ -2,11 +2,13 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { getServerEnv } from "@/lib/env";
 import { mailer } from "@/lib/email/mailer";
 import { publicEnv } from "@/lib/env";
+import { signUpServerSchema } from "@/features/auth/schema";
 
 const env = getServerEnv();
 
@@ -30,6 +32,21 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
+  hooks: {
+    // Server-side enforcement of the auth validation policy — cannot be
+    // bypassed by calling the API directly (client validation is only UX).
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/sign-up/email") {
+        const result = signUpServerSchema.safeParse(ctx.body);
+        if (!result.success) {
+          throw new APIError("BAD_REQUEST", {
+            message:
+              result.error.issues[0]?.message ?? "Invalid sign-up details",
+          });
+        }
+      }
+    }),
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

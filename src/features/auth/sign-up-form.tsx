@@ -2,12 +2,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth/client";
+import { passwordRules, signUpSchema, type SignUpInput } from "./schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -16,29 +18,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 export function SignUpForm() {
   const router = useRouter();
-  const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const form = useForm<SignUpInput>({
+    resolver: zodResolver(signUpSchema),
+    mode: "onChange",
+    defaultValues: { name: "", email: "", password: "" },
+  });
+  const password = form.watch("password");
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onSubmit(values: SignUpInput) {
     setError(null);
-    const form = new FormData(e.currentTarget);
-    const name = String(form.get("name")).trim();
-    const email = String(form.get("email"));
-    const password = String(form.get("password"));
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    setLoading(true);
-    const { error } = await authClient.signUp.email({ name, email, password });
-    setLoading(false);
-
+    const { error } = await authClient.signUp.email({
+      name: values.name,
+      email: values.email,
+      password: values.password,
+    });
     if (error) {
       setError(error.message ?? "Could not create account");
       return;
@@ -56,59 +62,106 @@ export function SignUpForm() {
           Start managing your team&apos;s quality assurance.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={onSubmit} noValidate>
-        <CardContent className="space-y-4">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {error}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
-            <Input id="name" name="name" required placeholder="Ada Lovelace" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Work email</Label>
-            <Input
-              id="email"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            {error && (
+              <div
+                role="alert"
+                className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {error}
+              </div>
+            )}
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ada Lovelace" autoComplete="name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="email"
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="you@company.com"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Work email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="you@company.com"
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
+            <FormField
+              control={form.control}
               name="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <ul className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                    {passwordRules.map((rule) => {
+                      const met = rule.test(password);
+                      return (
+                        <li
+                          key={rule.label}
+                          className={cn(
+                            "flex items-center gap-1.5 text-xs",
+                            met ? "text-success" : "text-muted-foreground"
+                          )}
+                        >
+                          {met ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : (
+                            <X className="h-3.5 w-3.5" />
+                          )}
+                          {rule.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </FormItem>
+              )}
             />
-            <p className="text-xs text-muted-foreground">
-              At least 8 characters.
+          </CardContent>
+          <CardFooter className="flex-col gap-3">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Create account
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/sign-in" className="font-medium text-primary">
+                Sign in
+              </Link>
             </p>
-          </div>
-        </CardContent>
-        <CardFooter className="flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Create account
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/sign-in" className="font-medium text-primary">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 }

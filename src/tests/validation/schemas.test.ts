@@ -15,6 +15,11 @@ import {
   updateDefectStatusSchema,
 } from "@/features/defects/schema";
 import { createRunSchema, executeSchema } from "@/features/test-runs/schema";
+import {
+  emailSchema,
+  passwordSchema,
+  signUpSchema,
+} from "@/features/auth/schema";
 
 /**
  * Input-validation tests for every user-facing schema. Covers happy path,
@@ -215,6 +220,61 @@ describe("updateDefectStatusSchema", () => {
     expect(updateDefectStatusSchema.safeParse({ status: "DONE" }).success).toBe(
       false
     );
+  });
+});
+
+describe("auth: emailSchema", () => {
+  it("accepts a normal email and lowercases it", () => {
+    const r = emailSchema.safeParse("User@Company.com");
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data).toBe("user@company.com");
+  });
+  it("rejects malformed emails", () => {
+    for (const bad of ["notanemail", "a@", "@b.com", "a b@c.com"]) {
+      expect(emailSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+  it("rejects disposable email domains", () => {
+    expect(emailSchema.safeParse("x@mailinator.com").success).toBe(false);
+    expect(emailSchema.safeParse("x@yopmail.com").success).toBe(false);
+  });
+});
+
+describe("auth: passwordSchema (strong policy)", () => {
+  it("accepts a strong password", () => {
+    expect(passwordSchema.safeParse("Password123!").success).toBe(true);
+  });
+  it("rejects weak passwords", () => {
+    for (const bad of [
+      "short1!", // too short
+      "alllowercase1!", // no uppercase
+      "ALLUPPERCASE1!", // no lowercase
+      "NoNumbers!!", // no digit
+      "NoSpecial123", // no special char
+    ]) {
+      expect(passwordSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe("auth: signUpSchema", () => {
+  it("rejects a weak password even with a valid email/name", () => {
+    expect(
+      signUpSchema.safeParse({
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        password: "weak",
+      }).success
+    ).toBe(false);
+  });
+  it("accepts a fully valid sign-up", () => {
+    expect(
+      signUpSchema.safeParse({
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        password: "Password123!",
+      }).success
+    ).toBe(true);
   });
 });
 

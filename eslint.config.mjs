@@ -22,6 +22,10 @@ const config = [
     // rules come from eslint-config-next's bundled flat config above.
     rules: {
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      // React Compiler advisory that fires on react-hook-form (it returns
+      // functions the compiler won't memoize). RHF is used intentionally and
+      // works correctly, so this is noise — silence it.
+      "react-hooks/incompatible-library": "off",
     },
   },
 ];
