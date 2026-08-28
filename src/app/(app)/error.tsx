@@ -16,7 +16,6 @@ export default function AppError({
 }) {
   React.useEffect(() => {
     // The digest correlates with the server-side log entry.
-    // eslint-disable-next-line no-console
     console.error("Rendered error boundary", error.digest);
   }, [error]);
 

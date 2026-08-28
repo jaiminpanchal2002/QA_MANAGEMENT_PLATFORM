@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Edge middleware for coarse route protection.
+ * Edge proxy (Next 16's renamed "middleware") for coarse route protection.
  *
  * This is an optimization / UX guard only — it redirects based on the mere
  * PRESENCE of a session cookie. It is NOT the security boundary: every server
@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * It intentionally does NOT import Better Auth: pulling the auth/JWT modules
  * into the Edge bundle drags in Node-only APIs (CompressionStream) that the
  * Edge runtime doesn't support. Checking for the session cookie by name keeps
- * the middleware pure and Edge-safe.
+ * the proxy pure and Edge-safe.
  */
 const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/reset-password", "/verify"];
 
@@ -30,7 +30,7 @@ function hasSessionCookie(request: NextRequest): boolean {
   });
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authed = hasSessionCookie(request);
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
