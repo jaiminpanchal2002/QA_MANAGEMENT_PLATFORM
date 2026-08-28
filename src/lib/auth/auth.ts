@@ -60,7 +60,8 @@ export const auth = betterAuth({
     cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
   advanced: {
-    cookiePrefix: "qa",
+    // Keep the default cookie prefix so middleware's getSessionCookie()
+    // resolves the same cookie name without extra configuration.
     useSecureCookies: env.NODE_ENV === "production",
   },
   trustedOrigins: [env.BETTER_AUTH_URL, publicEnv.NEXT_PUBLIC_APP_URL],

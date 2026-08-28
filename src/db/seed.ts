@@ -80,6 +80,10 @@ async function reset() {
   for (const o of orgs) {
     await db.delete(organizations).where(eq(organizations.id, o.id));
   }
+  // Delete seed users (cascades account/session) so each run recreates
+  // credential accounts cleanly and stays idempotent.
+  const emails = SEED_USERS.map((u) => u.email);
+  await db.delete(user).where(inArray(user.email, emails));
 }
 
 async function main() {
