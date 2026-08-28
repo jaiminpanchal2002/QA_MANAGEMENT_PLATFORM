@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileText, ChevronLeft, Bug } from "lucide-react";
+import { FileText, ChevronLeft, Bug, PlayCircle } from "lucide-react";
 import { format } from "date-fns";
 import { isAppError } from "@/lib/errors";
 import { getProjectService } from "@/features/projects/service";
@@ -68,7 +68,16 @@ export default async function ProjectDetailPage({
       <PageHeader
         title={project.name}
         description={project.description ?? "No description provided."}
-        actions={<CreateTestCaseDialog projectId={id} />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/projects/${id}/runs`}>
+                <PlayCircle className="h-4 w-4" /> Test Runs
+              </Link>
+            </Button>
+            <CreateTestCaseDialog projectId={id} />
+          </div>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3">

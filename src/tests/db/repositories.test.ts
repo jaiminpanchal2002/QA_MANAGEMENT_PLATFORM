@@ -10,6 +10,7 @@ import {
 import * as projectRepo from "@/server/repositories/project-repository";
 import * as testCaseRepo from "@/server/repositories/test-case-repository";
 import * as defectRepo from "@/server/repositories/defect-repository";
+import * as runRepo from "@/server/repositories/test-run-repository";
 
 /**
  * DB-backed repository integration tests. Exercise real CRUD + pagination +
@@ -144,6 +145,73 @@ d("repository integration", () => {
       second.id,
     ]);
     expect(removed).toBe(2);
+  });
+
+  it("runs the full run lifecycle: create → execute → recompute → cancel", async () => {
+    const p = await projectRepo.createProject({
+      organizationId: ctx.org,
+      name: "Run Project",
+      key: "RUNP",
+      ownerId: ctx.user,
+    });
+    const tc1 = await testCaseRepo.createTestCase({
+      organizationId: ctx.org,
+      projectId: p.id,
+      title: "case 1",
+      priority: "MEDIUM",
+      severity: "MINOR",
+      type: "FUNCTIONAL",
+      status: "ACTIVE",
+      automationStatus: "MANUAL",
+      tags: [],
+      createdBy: ctx.user,
+      steps: [],
+    });
+    const tc2 = await testCaseRepo.createTestCase({
+      organizationId: ctx.org,
+      projectId: p.id,
+      title: "case 2",
+      priority: "MEDIUM",
+      severity: "MINOR",
+      type: "FUNCTIONAL",
+      status: "ACTIVE",
+      automationStatus: "MANUAL",
+      tags: [],
+      createdBy: ctx.user,
+      steps: [],
+    });
+
+    const run = await runRepo.createRunWithExecutions({
+      organizationId: ctx.org,
+      projectId: p.id,
+      name: "Run #1",
+      testCaseIds: [tc1.id, tc2.id],
+      createdBy: ctx.user,
+    });
+    expect(run.status).toBe("NOT_STARTED");
+
+    const loaded = await runRepo.getRunWithExecutions(ctx.org, run.id);
+    expect(loaded?.executions).toHaveLength(2);
+    const [e1, e2] = loaded!.executions;
+
+    // Execute one → RUNNING (partial).
+    await runRepo.updateExecution(ctx.org, run.id, e1!.id, {
+      status: "PASSED",
+      executedBy: ctx.user,
+    });
+    expect(await runRepo.recomputeRunStatus(ctx.org, run.id)).toBe("RUNNING");
+
+    // Execute the second as FAILED → FAILED overall.
+    await runRepo.updateExecution(ctx.org, run.id, e2!.id, {
+      status: "FAILED",
+      errorMessage: "boom",
+      executedBy: ctx.user,
+    });
+    expect(await runRepo.recomputeRunStatus(ctx.org, run.id)).toBe("FAILED");
+
+    // Cancel.
+    const cancelled = await runRepo.cancelRun(ctx.org, run.id);
+    expect(cancelled?.status).toBe("CANCELLED");
   });
 
   it("creates a defect with a BUG reference and updates status", async () => {

@@ -20,6 +20,10 @@ implementation, and pending items are labeled as such in the UI.
 - **Dashboard**: real server-side aggregation — totals, pass rate, automation
   coverage, execution status distribution, execution trend, defects by severity,
   recent runs, recent activity. No hardcoded metrics.
+- **Test runs & execution**: create a run from selected test cases, an
+  execution board to record pass/fail/blocked/skipped per case (with loaders),
+  live progress + pass-rate, run-status roll-up, cancel, and an **auto-run**
+  that drives the simulated automation provider end-to-end.
 - **Audit log**: append-only, immutable, viewable by OWNER/ADMIN.
 - **Automation**: `AutomationProvider` interface + `SimulatedProvider` +
   JUnit parser (unit-tested).
@@ -39,8 +43,6 @@ several) repositories/services — but not yet dedicated CRUD screens:
 - **Test suites** — schema + membership join done; suite management UI pending
   (seed populates suites).
 - **Test plans** — schema + items join + repository read done; planning UI pending.
-- **Test runs / executions** — schema + repositories + ingestion done; manual
-  run authoring/execution UI pending (seed + webhook populate runs).
 - **Defects** — schema + repository (create/list/status) done; defect board UI
   pending (seed creates a linked defect).
 - **Teams** — schema + membership done; team management UI pending.

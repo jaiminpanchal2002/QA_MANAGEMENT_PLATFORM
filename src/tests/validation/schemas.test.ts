@@ -14,6 +14,7 @@ import {
   createDefectSchema,
   updateDefectStatusSchema,
 } from "@/features/defects/schema";
+import { createRunSchema, executeSchema } from "@/features/test-runs/schema";
 
 /**
  * Input-validation tests for every user-facing schema. Covers happy path,
@@ -214,6 +215,41 @@ describe("updateDefectStatusSchema", () => {
     expect(updateDefectStatusSchema.safeParse({ status: "DONE" }).success).toBe(
       false
     );
+  });
+});
+
+describe("createRunSchema", () => {
+  const uuid = "11111111-1111-4111-8111-111111111111";
+  it("accepts a run with at least one case", () => {
+    expect(
+      createRunSchema.safeParse({ name: "Run 1", testCaseIds: [uuid] }).success
+    ).toBe(true);
+  });
+  it("rejects a run with no cases", () => {
+    expect(
+      createRunSchema.safeParse({ name: "Run 1", testCaseIds: [] }).success
+    ).toBe(false);
+  });
+  it("rejects non-uuid case ids", () => {
+    expect(
+      createRunSchema.safeParse({ name: "Run 1", testCaseIds: ["x"] }).success
+    ).toBe(false);
+  });
+});
+
+describe("executeSchema", () => {
+  it("accepts a terminal status", () => {
+    expect(executeSchema.safeParse({ status: "PASSED" }).success).toBe(true);
+  });
+  it("rejects NOT_EXECUTED (not a recordable result)", () => {
+    expect(executeSchema.safeParse({ status: "NOT_EXECUTED" }).success).toBe(
+      false
+    );
+  });
+  it("rejects a negative duration", () => {
+    expect(
+      executeSchema.safeParse({ status: "PASSED", durationMs: -5 }).success
+    ).toBe(false);
   });
 });
 
