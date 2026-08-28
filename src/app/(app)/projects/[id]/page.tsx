@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileText, ChevronLeft } from "lucide-react";
+import { FileText, ChevronLeft, Bug } from "lucide-react";
 import { format } from "date-fns";
 import { isAppError } from "@/lib/errors";
 import { getProjectService } from "@/features/projects/service";
 import { listTestCasesService } from "@/features/test-cases/service";
+import { listDefectsService } from "@/features/defects/service";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyState } from "@/components/shell/empty-state";
 import { SearchInput } from "@/components/shell/search-input";
 import { Pagination } from "@/components/shell/pagination";
 import { CreateTestCaseDialog } from "@/features/test-cases/create-test-case-dialog";
+import { CreateDefectDialog } from "@/features/defects/create-defect-dialog";
+import { DefectStatusSelect } from "@/features/defects/defect-status-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +51,10 @@ export default async function ProjectDetailPage({
   const { data: testCases, meta } = await listTestCasesService(id, {
     page: sp.page,
     search: sp.search,
+  });
+
+  const { data: defects, meta: defectMeta } = await listDefectsService(id, {
+    pageSize: 25,
   });
 
   return (
@@ -143,8 +150,77 @@ export default async function ProjectDetailPage({
           total={meta.total}
         />
       )}
+
+      <div className="flex items-center justify-between pt-2">
+        <h2 className="text-lg font-semibold">
+          Defects{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            ({defectMeta.total})
+          </span>
+        </h2>
+        <CreateDefectDialog projectId={id} />
+      </div>
+
+      {defects.length === 0 ? (
+        <EmptyState
+          icon={Bug}
+          title="No defects logged"
+          description="Log a defect when a test fails or a bug is found."
+          action={<CreateDefectDialog projectId={id} />}
+        />
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Reference</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Severity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Reported</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {defects.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-mono text-xs">
+                      {d.reference}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{d.title}</TableCell>
+                  <TableCell>
+                    <Badge variant={severityVariant(d.severity)}>
+                      {d.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DefectStatusSelect
+                      projectId={id}
+                      defectId={d.id}
+                      current={d.status}
+                    />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(new Date(d.createdAt), "MMM d, yyyy")}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
     </div>
   );
+}
+
+function severityVariant(
+  s: string
+): "default" | "destructive" | "warning" | "secondary" {
+  if (s === "BLOCKER" || s === "CRITICAL") return "destructive";
+  if (s === "MAJOR") return "warning";
+  if (s === "TRIVIAL") return "secondary";
+  return "default";
 }
 
 function priorityVariant(

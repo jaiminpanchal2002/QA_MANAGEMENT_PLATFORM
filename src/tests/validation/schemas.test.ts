@@ -10,6 +10,10 @@ import {
 } from "@/features/test-cases/schema";
 import { createOrganizationSchema } from "@/features/organizations/schema";
 import { testResultsPayloadSchema } from "@/features/integrations/schema";
+import {
+  createDefectSchema,
+  updateDefectStatusSchema,
+} from "@/features/defects/schema";
 
 /**
  * Input-validation tests for every user-facing schema. Covers happy path,
@@ -177,6 +181,38 @@ describe("createOrganizationSchema", () => {
     expect(createOrganizationSchema.safeParse({ name: "" }).success).toBe(false);
     expect(createOrganizationSchema.safeParse({ name: "Acme" }).success).toBe(
       true
+    );
+  });
+});
+
+describe("createDefectSchema", () => {
+  it("accepts a minimal defect with enum defaults", () => {
+    const r = createDefectSchema.parse({ title: "Crash" });
+    expect(r.priority).toBe("MEDIUM");
+    expect(r.severity).toBe("MAJOR");
+  });
+  it("rejects an empty title", () => {
+    expect(createDefectSchema.safeParse({ title: "" }).success).toBe(false);
+  });
+  it("rejects an invalid severity", () => {
+    expect(
+      createDefectSchema.safeParse({ title: "X", severity: "HUGE" }).success
+    ).toBe(false);
+  });
+  it("rejects a non-uuid assignedTo", () => {
+    expect(
+      createDefectSchema.safeParse({ title: "X", assignedTo: "nope" }).success
+    ).toBe(false);
+  });
+});
+
+describe("updateDefectStatusSchema", () => {
+  it("accepts valid statuses and rejects others", () => {
+    expect(updateDefectStatusSchema.safeParse({ status: "RESOLVED" }).success).toBe(
+      true
+    );
+    expect(updateDefectStatusSchema.safeParse({ status: "DONE" }).success).toBe(
+      false
     );
   });
 });

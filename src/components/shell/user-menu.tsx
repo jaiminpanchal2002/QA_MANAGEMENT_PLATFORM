@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LogOut, Moon, Sun, User as UserIcon } from "lucide-react";
+import { Loader2, LogOut, Moon, Sun, User as UserIcon } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,17 @@ export function UserMenu({
 }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [signingOut, setSigningOut] = React.useState(false);
 
   async function signOut() {
-    await authClient.signOut();
-    router.push("/sign-in");
-    router.refresh();
+    setSigningOut(true);
+    try {
+      await authClient.signOut();
+      router.push("/sign-in");
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -78,9 +84,20 @@ export function UserMenu({
           Toggle theme
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={signOut} className="text-destructive">
-          <LogOut className="h-4 w-4" />
-          Sign out
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            void signOut();
+          }}
+          disabled={signingOut}
+          className="text-destructive"
+        >
+          {signingOut ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <LogOut className="h-4 w-4" />
+          )}
+          {signingOut ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

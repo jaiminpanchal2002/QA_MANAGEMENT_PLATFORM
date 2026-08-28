@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { switchOrganizationAction } from "@/features/organizations/actions";
@@ -55,7 +55,11 @@ export function OrgSwitcher({
           disabled={pending}
         >
           <span className="truncate">{active?.name ?? "Select org"}</span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          {pending ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-70" />
+          ) : (
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[240px]">
