@@ -8,6 +8,14 @@ defects, automation ingestion and reporting — built as a **modular monolith**.
 > architecture, strict multi-tenant isolation, server-enforced RBAC, validation,
 > error handling, testing and deployment readiness over feature breadth.
 
+**🔗 Live demo:** https://qamanagement-one.vercel.app · **Demo login:**
+`owner@acme.test` / `Password123!` (org "Acme QA"; a second isolated org
+"Globex Testing" demonstrates tenant isolation)
+
+**📐 Design docs:** [High-Level Design](docs/HLD.md) ·
+[Architecture (ERD, routes, RBAC matrix)](docs/ARCHITECTURE.md) ·
+[Deployment](docs/DEPLOYMENT.md) · [Status (implemented vs pending)](docs/STATUS.md)
+
 ---
 
 ## Tech stack
@@ -91,7 +99,8 @@ exposes any Globex data.
 ## Architecture
 
 A **modular monolith**: one deployable, organized by domain module so any module
-can later be extracted into a service. See
+can later be extracted into a service. See the
+[High-Level Design](docs/HLD.md) (diagrams + tech-stack rationale) and
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full write-up (ERD, route
 list, RBAC matrix, tenancy & security strategy).
 
@@ -183,6 +192,8 @@ mandated security tests (TEST 1–10) to their implementations, and
 ---
 
 ## Deployment (Vercel + Neon)
+
+> Full step-by-step checklist: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 1. Create a Neon Postgres database; copy the pooled connection string.
 2. Import the repo into Vercel.
