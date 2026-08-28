@@ -27,6 +27,14 @@ import { formatDistanceToNow } from "date-fns";
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
+const EXEC_COLORS: Record<string, string> = {
+  PASSED: "hsl(142 71% 45%)",
+  FAILED: "hsl(0 72% 51%)",
+  BLOCKED: "hsl(38 92% 50%)",
+  SKIPPED: "hsl(215 16% 47%)",
+  NOT_EXECUTED: "hsl(214 32% 80%)",
+};
+
 export default async function DashboardPage() {
   const m = await getDashboardMetrics();
 
@@ -91,6 +99,27 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <StatusDonut data={execDistribution} />
+            {execDistribution.length > 0 && (
+              <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                {execDistribution.map((d) => (
+                  <li
+                    key={d.status}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                        style={{ background: EXEC_COLORS[d.status] }}
+                      />
+                      <span className="truncate text-muted-foreground">
+                        {d.status.replace("_", " ").toLowerCase()}
+                      </span>
+                    </span>
+                    <span className="tabular-nums font-medium">{d.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

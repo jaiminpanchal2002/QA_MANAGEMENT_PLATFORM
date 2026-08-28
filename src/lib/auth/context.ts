@@ -177,11 +177,18 @@ async function getProjectRole(
  *   3. the project belongs to that organization (else 404)
  *   4. the caller holds `permission` for the project (else 403)
  */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function requireProjectPermission(
   projectId: string,
   permission: Permission
 ): Promise<ProjectContext> {
   const ctx = await requireOrgContext();
+
+  // Reject malformed ids before they reach the DB (a non-UUID would raise a
+  // Postgres type error → 500). Treated as not-found to avoid leaking anything.
+  if (!UUID_RE.test(projectId)) throw Errors.notFound("Project not found");
 
   const project = await loadProjectInOrg(ctx.organizationId, projectId);
   if (!project) throw Errors.notFound("Project not found");

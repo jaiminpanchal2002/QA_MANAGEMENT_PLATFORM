@@ -1,5 +1,27 @@
 /** @type {import('next').NextConfig} */
+
+// Content-Security-Policy. Next.js injects inline hydration scripts/styles, so
+// 'unsafe-inline' is required without a full nonce pipeline; 'unsafe-eval' is
+// needed only in development (React refresh). Tighten with nonces if stricter
+// guarantees are required.
+const isDev = process.env.NODE_ENV !== "production";
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self'" + (isDev ? " ws:" : ""),
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+]
+  .join("; ")
+  .trim();
+
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },

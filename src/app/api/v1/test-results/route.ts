@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { created, handle } from "@/server/http";
 import { Errors } from "@/lib/errors";
 import { ingestTestResults } from "@/features/integrations/ingest";
+import { clientKey, webhookLimiter } from "@/lib/security/rate-limit";
 
 /**
  * POST /api/v1/test-results
@@ -12,6 +13,8 @@ import { ingestTestResults } from "@/features/integrations/ingest";
  * cases by reference and ingested as an automated test run.
  */
 export const POST = handle(async (req: NextRequest) => {
+  webhookLimiter.check(clientKey(req.headers, "webhook"));
+
   const auth = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   if (!token) {

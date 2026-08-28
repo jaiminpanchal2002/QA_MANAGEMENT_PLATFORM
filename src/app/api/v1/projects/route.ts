@@ -5,6 +5,7 @@ import {
   createProjectService,
   listProjectsService,
 } from "@/features/projects/service";
+import { clientKey, writeApiLimiter } from "@/lib/security/rate-limit";
 
 /**
  * GET /api/v1/projects
@@ -22,6 +23,7 @@ export const GET = handle(async (req: NextRequest) => {
  * Create a project (requires project.create). Body validated with Zod.
  */
 export const POST = handle(async (req: NextRequest) => {
+  writeApiLimiter.check(clientKey(req.headers, "projects-write"));
   const body = await req.json().catch(() => ({}));
   const project = await createProjectService(body);
   return created(project);

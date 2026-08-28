@@ -29,6 +29,7 @@ export default async function AppLayout({
         <Topbar
           user={user}
           activeOrgId={ctx.organizationId}
+          orgRole={ctx.orgRole}
           organizations={organizations.map((o) => ({
             id: o.organizationId,
             name: o.name,
