@@ -64,7 +64,18 @@ export const auth = betterAuth({
     // resolves the same cookie name without extra configuration.
     useSecureCookies: env.NODE_ENV === "production",
   },
-  trustedOrigins: [env.BETTER_AUTH_URL, publicEnv.NEXT_PUBLIC_APP_URL],
+  trustedOrigins: Array.from(
+    new Set(
+      [
+        env.BETTER_AUTH_URL,
+        publicEnv.NEXT_PUBLIC_APP_URL,
+        process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : null,
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+      ].filter((v): v is string => Boolean(v))
+    )
+  ),
   plugins: [nextCookies()],
 });
 

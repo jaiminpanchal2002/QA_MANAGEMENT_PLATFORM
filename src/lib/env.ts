@@ -20,7 +20,10 @@ const serverSchema = z.object({
   BETTER_AUTH_SECRET: z
     .string()
     .min(16, "BETTER_AUTH_SECRET must be at least 16 characters"),
-  BETTER_AUTH_URL: z.string().url(),
+  // Optional + normalized: falls back to the Vercel-provided URL at build/run
+  // time, so deployment does not require knowing the final URL up front. A
+  // bare host (no scheme) is accepted and https:// is prepended.
+  BETTER_AUTH_URL: z.string().optional(),
   BLOB_READ_WRITE_TOKEN: z.string().optional().default(""),
   RESEND_API_KEY: z.string().optional().default(""),
   EMAIL_FROM: z.string().optional().default("QA Platform <no-reply@example.com>"),
@@ -43,16 +46,38 @@ const serverSchema = z.object({
 });
 
 const publicSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
 
-type ServerEnv = z.infer<typeof serverSchema>;
-type PublicEnv = z.infer<typeof publicSchema>;
+type ServerEnv = Omit<z.infer<typeof serverSchema>, "BETTER_AUTH_URL"> & {
+  BETTER_AUTH_URL: string;
+};
+type PublicEnv = { NEXT_PUBLIC_APP_URL: string };
 
 function formatIssues(error: z.ZodError): string {
   return error.issues
     .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
     .join("\n");
+}
+
+/** Normalize a URL-ish value: prepend https:// to a bare host; else as-is. */
+function normalizeUrl(value: string): string {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+/**
+ * Resolve the canonical app URL. Precedence:
+ *   1. explicit BETTER_AUTH_URL / NEXT_PUBLIC_APP_URL (normalized)
+ *   2. Vercel's stable production domain, then the per-deploy URL
+ *   3. localhost for local dev
+ * This removes the build-time chicken-and-egg (needing the URL before deploy).
+ */
+function resolveAppUrl(explicit?: string): string {
+  if (explicit && explicit.trim()) return normalizeUrl(explicit.trim());
+  const vercel =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
 }
 
 let cachedServerEnv: ServerEnv | null = null;
@@ -71,7 +96,10 @@ export function getServerEnv(): ServerEnv {
         "Copy .env.example to .env.local and provide the required values."
     );
   }
-  cachedServerEnv = parsed.data;
+  cachedServerEnv = {
+    ...parsed.data,
+    BETTER_AUTH_URL: resolveAppUrl(parsed.data.BETTER_AUTH_URL),
+  };
   return cachedServerEnv;
 }
 
@@ -79,6 +107,8 @@ const parsedPublic = publicSchema.safeParse({
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 });
 
-export const publicEnv: PublicEnv = parsedPublic.success
-  ? parsedPublic.data
-  : { NEXT_PUBLIC_APP_URL: "http://localhost:3000" };
+export const publicEnv: PublicEnv = {
+  NEXT_PUBLIC_APP_URL: resolveAppUrl(
+    parsedPublic.success ? parsedPublic.data.NEXT_PUBLIC_APP_URL : undefined
+  ),
+};

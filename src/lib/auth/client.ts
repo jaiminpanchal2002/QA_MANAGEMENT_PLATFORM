@@ -7,7 +7,12 @@ import { publicEnv } from "@/lib/env";
  * Only public config is used here — no secrets reach the client bundle.
  */
 export const authClient = createAuthClient({
-  baseURL: publicEnv.NEXT_PUBLIC_APP_URL,
+  // Always talk to the same origin the app is served from — robust across
+  // preview, production and custom domains (the build-inlined env can differ).
+  baseURL:
+    typeof window !== "undefined"
+      ? window.location.origin
+      : publicEnv.NEXT_PUBLIC_APP_URL,
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
