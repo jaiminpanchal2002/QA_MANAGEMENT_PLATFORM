@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth/client";
+import { emailSchema } from "@/features/auth/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,13 +20,22 @@ import {
 export default function ResetPasswordPage() {
   const [loading, setLoading] = React.useState(false);
   const [sent, setSent] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const email = String(new FormData(e.currentTarget).get("email"));
+    setError(null);
+    const raw = String(new FormData(e.currentTarget).get("email"));
+    const parsed = emailSchema.safeParse(raw);
+    if (!parsed.success) {
+      setError(
+        parsed.error.issues[0]?.message ?? "Enter a valid email address"
+      );
+      return;
+    }
     setLoading(true);
     await authClient.requestPasswordReset({
-      email,
+      email: parsed.data,
       redirectTo: "/reset-password/confirm",
     });
     setLoading(false);
@@ -51,6 +61,11 @@ export default function ResetPasswordPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" required />
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
             </div>
           )}
         </CardContent>

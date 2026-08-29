@@ -26,6 +26,84 @@ const DISPOSABLE_DOMAINS = new Set([
   "fakeinbox.com",
 ]);
 
+/**
+ * Placeholder / throwaway local-parts (the bit before "@"). These are the
+ * values people type when they are not entering a real address — the reason
+ * `abc@gmail.com`, `test@…`, `asdf@…` must be rejected even though the domain
+ * itself is legitimate. Compared after normalization (see `normalizeLocal`).
+ */
+const PLACEHOLDER_LOCALPARTS = new Set([
+  "a",
+  "ab",
+  "abc",
+  "abcd",
+  "abcde",
+  "abc123",
+  "abcdef",
+  "xyz",
+  "xxx",
+  "qwerty",
+  "asdf",
+  "asdfg",
+  "asdfgh",
+  "zzz",
+  "test",
+  "tester",
+  "testing",
+  "test123",
+  "testtest",
+  "example",
+  "sample",
+  "demo",
+  "dummy",
+  "fake",
+  "invalid",
+  "placeholder",
+  "foo",
+  "bar",
+  "baz",
+  "foobar",
+  "qux",
+  "user",
+  "username",
+  "someone",
+  "somebody",
+  "anybody",
+  "email",
+  "mail",
+  "temp",
+  "tmp",
+  "trash",
+  "junk",
+  "none",
+  "null",
+  "nil",
+  "na",
+  "tbd",
+  "n-a",
+]);
+
+/**
+ * Normalize a local-part for placeholder detection: lowercase, drop the "+tag"
+ * suffix, and remove dots (Gmail-style, so `a.b.c` == `abc`). This makes the
+ * blocklist resilient to trivial obfuscation like `a.b.c@gmail.com`.
+ */
+function normalizeLocal(email: string): string {
+  const local = email.split("@")[0] ?? "";
+  return local.split("+")[0]!.replace(/\./g, "");
+}
+
+function isPlausibleLocal(email: string): boolean {
+  const local = normalizeLocal(email);
+  if (local.length === 0) return false;
+  if (PLACEHOLDER_LOCALPARTS.has(local)) return false;
+  // All the same character, e.g. "aaaa", "1111".
+  if (/^(.)\1*$/.test(local)) return false;
+  // Purely numeric, e.g. "12345".
+  if (/^\d+$/.test(local)) return false;
+  return true;
+}
+
 export const emailSchema = z
   .string()
   .trim()
@@ -39,7 +117,10 @@ export const emailSchema = z
       return domain ? !DISPOSABLE_DOMAINS.has(domain) : false;
     },
     { message: "Disposable email addresses are not allowed" }
-  );
+  )
+  .refine(isPlausibleLocal, {
+    message: "Enter a real email address, not a placeholder",
+  });
 
 /** Password requirement predicates — reused by the live UI checklist. */
 export const passwordRules = [

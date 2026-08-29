@@ -225,9 +225,9 @@ describe("updateDefectStatusSchema", () => {
 
 describe("auth: emailSchema", () => {
   it("accepts a normal email and lowercases it", () => {
-    const r = emailSchema.safeParse("User@Company.com");
+    const r = emailSchema.safeParse("Ada.Lovelace@Company.com");
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data).toBe("user@company.com");
+    if (r.success) expect(r.data).toBe("ada.lovelace@company.com");
   });
   it("rejects malformed emails", () => {
     for (const bad of ["notanemail", "a@", "@b.com", "a b@c.com"]) {
@@ -237,6 +237,29 @@ describe("auth: emailSchema", () => {
   it("rejects disposable email domains", () => {
     expect(emailSchema.safeParse("x@mailinator.com").success).toBe(false);
     expect(emailSchema.safeParse("x@yopmail.com").success).toBe(false);
+  });
+  it("rejects placeholder / test local-parts on real domains", () => {
+    for (const bad of [
+      "abc@gmail.com",
+      "test@gmail.com",
+      "asdf@gmail.com",
+      "a.b.c@gmail.com", // gmail dots normalize to "abc"
+      "abc+promo@gmail.com", // +tag stripped -> "abc"
+      "aaaa@company.com",
+      "12345@company.com",
+      "demo@outlook.com",
+    ]) {
+      expect(emailSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+  it("accepts genuine-looking addresses", () => {
+    for (const ok of [
+      "ada.lovelace@gmail.com",
+      "jaimin.panchal@company.com",
+      "qa-lead@acme.io",
+    ]) {
+      expect(emailSchema.safeParse(ok).success).toBe(true);
+    }
   });
 });
 
