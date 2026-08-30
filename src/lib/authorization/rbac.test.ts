@@ -98,9 +98,32 @@ describe("combined permission resolution (can)", () => {
     ).toBe(true);
   });
 
-  it("a member with no project role has no project access", () => {
+  it("an org member can read project data but not mutate without a project role", () => {
+    // Read is org-wide (collaboration): members see projects in their tenant.
+    expect(
+      can({ orgRole: "MEMBER", projectRole: null }, "project.view")
+    ).toBe(true);
     expect(
       can({ orgRole: "MEMBER", projectRole: null }, "testcase.view")
+    ).toBe(true);
+    expect(
+      can({ orgRole: "MEMBER", projectRole: null }, "defect.view")
+    ).toBe(true);
+    // But mutations still require a project role.
+    expect(
+      can({ orgRole: "MEMBER", projectRole: null }, "testcase.create")
+    ).toBe(false);
+    expect(
+      can({ orgRole: "MEMBER", projectRole: null }, "project.delete")
+    ).toBe(false);
+  });
+
+  it("an org VIEWER can read but never mutate project data", () => {
+    expect(
+      can({ orgRole: "VIEWER", projectRole: null }, "testcase.view")
+    ).toBe(true);
+    expect(
+      can({ orgRole: "VIEWER", projectRole: null }, "testcase.create")
     ).toBe(false);
   });
 });

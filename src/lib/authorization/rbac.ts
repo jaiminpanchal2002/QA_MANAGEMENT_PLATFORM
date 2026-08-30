@@ -47,9 +47,23 @@ export function can(
   }
 
   // Project-scoped permission.
+  // Org OWNER/ADMIN implicitly hold every project permission.
   if (input.orgRole === "OWNER" || input.orgRole === "ADMIN") return true;
+
+  // Read is organization-wide: any member (VIEWER included) may VIEW project
+  // data inside their own tenant. This keeps project detail pages consistent
+  // with the project list, which already shows every org project to all
+  // members. Mutations still require an explicit project role below.
+  // Cross-tenant access is unaffected — it is blocked before `can` is reached.
+  if (isProjectViewPermission(permission)) return true;
+
   if (!input.projectRole) return false;
   return hasProjectPermission(input.projectRole, permission);
+}
+
+/** True for the read-only ".view" project permissions (project.view, etc.). */
+function isProjectViewPermission(permission: Permission): boolean {
+  return permission.endsWith(".view");
 }
 
 /** Whether an org role can administer members / roles. */

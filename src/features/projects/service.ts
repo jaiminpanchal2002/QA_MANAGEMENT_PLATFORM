@@ -4,6 +4,7 @@ import {
   requireOrgPermission,
   requireProjectPermission,
 } from "@/lib/auth/context";
+import { can } from "@/lib/authorization/rbac";
 import { recordAudit } from "@/lib/audit/audit";
 import { Errors } from "@/lib/errors";
 import * as repo from "@/server/repositories/project-repository";
@@ -49,6 +50,25 @@ export async function getProjectService(projectId: string) {
   const project = await repo.getProjectById(ctx.organizationId, projectId);
   if (!project) throw Errors.notFound("Project not found");
   return project;
+}
+
+/**
+ * Project detail + the caller's write capabilities, so the workspace can hide
+ * actions the user can't perform (read-only members see no create/edit
+ * controls, rather than buttons that fail server-side).
+ */
+export async function getProjectWorkspaceService(projectId: string) {
+  const ctx = await requireProjectPermission(projectId, "project.view");
+  const project = await repo.getProjectById(ctx.organizationId, projectId);
+  if (!project) throw Errors.notFound("Project not found");
+
+  const perms = { orgRole: ctx.orgRole, projectRole: ctx.projectRole };
+  return {
+    project,
+    canCreateTestCase: can(perms, "testcase.create"),
+    canCreateDefect: can(perms, "defect.create"),
+    canUpdateDefect: can(perms, "defect.update"),
+  };
 }
 
 export async function createProjectService(input: unknown) {

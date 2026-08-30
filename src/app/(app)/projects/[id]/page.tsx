@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileText, ChevronLeft, Bug, PlayCircle } from "lucide-react";
+import { FileText, ChevronLeft, Bug, PlayCircle, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { isAppError } from "@/lib/errors";
-import { getProjectService } from "@/features/projects/service";
+import { getProjectWorkspaceService } from "@/features/projects/service";
 import { listTestCasesService } from "@/features/test-cases/service";
 import { listDefectsService } from "@/features/defects/service";
 import { PageHeader } from "@/components/shell/page-header";
@@ -39,14 +39,40 @@ export default async function ProjectDetailPage({
   const { id } = await params;
   const sp = await searchParams;
 
-  let project;
+  let workspace;
   try {
-    project = await getProjectService(id);
+    workspace = await getProjectWorkspaceService(id);
   } catch (error) {
-    // 404 for cross-tenant / missing; anything else re-thrown.
+    // 404 for cross-tenant / missing.
     if (isAppError(error) && error.code === "NOT_FOUND") notFound();
+    // Friendly, explicit message when the user lacks access — never the raw
+    // error boundary.
+    if (isAppError(error) && error.code === "FORBIDDEN") {
+      return (
+        <div className="space-y-6">
+          <Button asChild variant="ghost" size="sm" className="-ml-2">
+            <Link href="/projects">
+              <ChevronLeft className="h-4 w-4" /> Projects
+            </Link>
+          </Button>
+          <EmptyState
+            icon={Lock}
+            title="You don't have access to this project"
+            description="Ask an organization owner or admin to grant you access, or pick a project you're a member of."
+            action={
+              <Button asChild variant="outline">
+                <Link href="/projects">Back to projects</Link>
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
     throw error;
   }
+
+  const { project, canCreateTestCase, canCreateDefect, canUpdateDefect } =
+    workspace;
 
   const { data: testCases, meta } = await listTestCasesService(id, {
     page: sp.page,
@@ -75,7 +101,7 @@ export default async function ProjectDetailPage({
                 <PlayCircle className="h-4 w-4" /> Test Runs
               </Link>
             </Button>
-            <CreateTestCaseDialog projectId={id} />
+            {canCreateTestCase && <CreateTestCaseDialog projectId={id} />}
           </div>
         }
       />
@@ -111,7 +137,11 @@ export default async function ProjectDetailPage({
               ? "Try a different search term."
               : "Author your first test case to start building coverage."
           }
-          action={!sp.search ? <CreateTestCaseDialog projectId={id} /> : undefined}
+          action={
+            !sp.search && canCreateTestCase ? (
+              <CreateTestCaseDialog projectId={id} />
+            ) : undefined
+          }
         />
       ) : (
         <Card>
@@ -167,7 +197,7 @@ export default async function ProjectDetailPage({
             ({defectMeta.total})
           </span>
         </h2>
-        <CreateDefectDialog projectId={id} />
+        {canCreateDefect && <CreateDefectDialog projectId={id} />}
       </div>
 
       {defects.length === 0 ? (
@@ -175,7 +205,9 @@ export default async function ProjectDetailPage({
           icon={Bug}
           title="No defects logged"
           description="Log a defect when a test fails or a bug is found."
-          action={<CreateDefectDialog projectId={id} />}
+          action={
+            canCreateDefect ? <CreateDefectDialog projectId={id} /> : undefined
+          }
         />
       ) : (
         <Card>
@@ -204,11 +236,15 @@ export default async function ProjectDetailPage({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <DefectStatusSelect
-                      projectId={id}
-                      defectId={d.id}
-                      current={d.status}
-                    />
+                    {canUpdateDefect ? (
+                      <DefectStatusSelect
+                        projectId={id}
+                        defectId={d.id}
+                        current={d.status}
+                      />
+                    ) : (
+                      <Badge variant="outline">{d.status}</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(d.createdAt), "MMM d, yyyy")}
