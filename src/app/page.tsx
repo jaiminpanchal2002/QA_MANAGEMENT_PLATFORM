@@ -223,15 +223,17 @@ export default function LandingPage() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((f, i) => (
-              <Reveal key={f.title} delay={(i % 3) * 90}>
-                <div className="group relative h-full overflow-hidden rounded-xl border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
-                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-2.5 text-primary transition-transform duration-300 group-hover:scale-110">
-                    <f.icon className="h-5 w-5" />
+              <Reveal key={f.title} delay={(i % 3) * 90} className="h-full">
+                <TiltCard maxTilt={5} className="group h-full">
+                  <div className="relative h-full overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+                    <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-2.5 text-primary transition-transform duration-300 group-hover:scale-110">
+                      <f.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mb-1.5 font-semibold">{f.title}</h3>
+                    <p className="text-sm text-muted-foreground">{f.body}</p>
                   </div>
-                  <h3 className="mb-1.5 font-semibold">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground">{f.body}</p>
-                </div>
+                </TiltCard>
               </Reveal>
             ))}
           </div>
