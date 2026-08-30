@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/reveal";
+import { TiltCard } from "@/components/marketing/tilt-card";
 
 const features = [
   {
@@ -157,14 +159,32 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            {/* Floating product mockup */}
+            {/* Floating product mockup with pointer-tracked 3D tilt */}
             <div
-              className="animate-rise mt-16 w-full max-w-4xl"
+              className="animate-rise mt-16 w-full max-w-4xl [perspective:1600px]"
               style={{ animationDelay: "320ms" }}
             >
-              <div className="animate-float rounded-xl border bg-card/80 p-3 shadow-2xl shadow-primary/10 backdrop-blur">
-                <DashboardMockup />
-              </div>
+              <TiltCard className="relative">
+                <div className="animate-float rounded-xl border bg-card/80 p-3 shadow-2xl shadow-primary/10 backdrop-blur [transform-style:preserve-3d]">
+                  <DashboardMockup />
+
+                  {/* Parallax accent chips — lifted toward the viewer on Z */}
+                  <div className="pointer-events-none absolute -left-5 top-8 hidden [transform:translateZ(70px)] sm:block">
+                    <FloatingChip
+                      icon={CheckCircle2}
+                      label="Run passed"
+                      tone="success"
+                    />
+                  </div>
+                  <div className="pointer-events-none absolute -right-5 bottom-14 hidden [transform:translateZ(95px)] sm:block">
+                    <FloatingChip
+                      icon={Bug}
+                      label="Defect logged"
+                      tone="destructive"
+                    />
+                  </div>
+                </div>
+              </TiltCard>
             </div>
           </div>
         </section>
@@ -326,11 +346,34 @@ function DashboardMockup() {
         {bars.map((h, i) => (
           <div
             key={i}
-            className="flex-1 rounded-t bg-gradient-to-t from-primary/40 to-primary"
-            style={{ height: `${h}%` }}
+            className="animate-grow-bar flex-1 origin-bottom rounded-t bg-gradient-to-t from-primary/40 to-primary"
+            style={{ height: `${h}%`, animationDelay: `${500 + i * 70}ms` }}
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function FloatingChip({
+  icon: Icon,
+  label,
+  tone,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  tone: "success" | "destructive";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-success"
+      : "text-destructive";
+  return (
+    <div className="animate-float flex items-center gap-2 rounded-lg border bg-card/95 px-3 py-2 text-xs font-medium shadow-xl backdrop-blur">
+      <span className={`inline-flex ${toneClass}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      {label}
     </div>
   );
 }

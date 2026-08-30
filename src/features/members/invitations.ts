@@ -9,7 +9,8 @@ import { canAssignOrgRole } from "@/lib/authorization/rbac";
 import { recordAudit } from "@/lib/audit/audit";
 import { Errors } from "@/lib/errors";
 import { mailer } from "@/lib/email/mailer";
-import { publicEnv } from "@/lib/env";
+import { invitationEmailHtml } from "@/lib/email/templates";
+import { getRequestBaseUrl } from "@/lib/http/request-url";
 import * as repo from "@/server/repositories/organization-repository";
 import { addMemberSchema, removeMemberSchema } from "./schema";
 
@@ -76,14 +77,16 @@ export async function addOrInviteMemberService(
     expiresAt,
   });
 
+  const baseUrl = await getRequestBaseUrl();
   const { delivered } = await mailer.send({
     to: data.email,
     subject: `You're invited to ${ctx.organizationName} on QA Platform`,
-    html: invitationEmail({
+    html: invitationEmailHtml({
       orgName: ctx.organizationName,
       inviterName: ctx.user.name || ctx.user.email,
       role: data.role,
-      acceptUrl: `${publicEnv.NEXT_PUBLIC_APP_URL}/invitations/${token}`,
+      acceptUrl: `${baseUrl}/invitations/${token}`,
+      ttlDays: INVITE_TTL_DAYS,
     }),
   });
 
@@ -188,44 +191,4 @@ export async function revokeInvitationService(input: unknown) {
     entityId: id,
   });
   return { id };
-}
-
-function invitationEmail(opts: {
-  orgName: string;
-  inviterName: string;
-  role: string;
-  acceptUrl: string;
-}): string {
-  const org = escapeHtml(opts.orgName);
-  const inviter = escapeHtml(opts.inviterName);
-  return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:480px;margin:auto;color:#0f172a">
-      <h2 style="margin:0 0 8px">You've been invited to ${org}</h2>
-      <p style="color:#475569;margin:0 0 16px">
-        ${inviter} invited you to join <strong>${org}</strong> on QA Platform
-        as <strong>${escapeHtml(opts.role)}</strong>.
-      </p>
-      <p style="margin:0 0 24px">
-        <a href="${opts.acceptUrl}"
-           style="display:inline-block;background:#4f46e5;color:#fff;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:600">
-          Accept invitation
-        </a>
-      </p>
-      <p style="color:#64748b;font-size:12px;margin:0">
-        Or paste this link into your browser:<br/>
-        <span style="color:#4f46e5;word-break:break-all">${opts.acceptUrl}</span>
-      </p>
-      <p style="color:#94a3b8;font-size:12px;margin:16px 0 0">
-        This invitation expires in ${INVITE_TTL_DAYS} days. If you didn't expect
-        it, you can ignore this email.
-      </p>
-    </div>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

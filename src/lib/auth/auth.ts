@@ -7,6 +7,7 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { getServerEnv } from "@/lib/env";
 import { mailer } from "@/lib/email/mailer";
+import { verifyEmailHtml, resetPasswordEmailHtml } from "@/lib/email/templates";
 import { publicEnv } from "@/lib/env";
 import { signUpServerSchema } from "@/features/auth/schema";
 
@@ -56,7 +57,7 @@ export const auth = betterAuth({
       await mailer.send({
         to: user.email,
         subject: "Reset your QA Platform password",
-        html: resetPasswordEmail(user.name ?? user.email, url),
+        html: resetPasswordEmailHtml({ name: user.name ?? user.email, url }),
       });
     },
   },
@@ -67,7 +68,7 @@ export const auth = betterAuth({
       await mailer.send({
         to: user.email,
         subject: "Verify your email for QA Platform",
-        html: verifyEmail(user.name ?? user.email, url),
+        html: verifyEmailHtml({ name: user.name ?? user.email, url }),
       });
     },
   },
@@ -97,31 +98,3 @@ export const auth = betterAuth({
 });
 
 export type AuthSession = typeof auth.$Infer.Session;
-
-function verifyEmail(name: string, url: string): string {
-  return `
-    <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto">
-      <h2>Welcome to QA Platform, ${escapeHtml(name)}</h2>
-      <p>Confirm your email address to activate your account.</p>
-      <p><a href="${url}" style="background:#4f46e5;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Verify email</a></p>
-      <p style="color:#64748b;font-size:12px">If you didn't create this account, you can ignore this email.</p>
-    </div>`;
-}
-
-function resetPasswordEmail(name: string, url: string): string {
-  return `
-    <div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto">
-      <h2>Password reset</h2>
-      <p>Hi ${escapeHtml(name)}, use the link below to choose a new password.</p>
-      <p><a href="${url}" style="background:#4f46e5;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Reset password</a></p>
-      <p style="color:#64748b;font-size:12px">This link expires shortly. If you didn't request it, ignore this email.</p>
-    </div>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}

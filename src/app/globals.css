@@ -152,11 +152,24 @@
     }
   }
 
+  @keyframes grow-bar {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
   .animate-aurora {
     animation: aurora-drift 18s ease-in-out infinite;
   }
   .animate-float {
     animation: float-y 6s ease-in-out infinite;
+  }
+  .animate-grow-bar {
+    /* Strong ease-out (emil) so bars settle with intent, not linearly. */
+    animation: grow-bar 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* Scroll-reveal: elements start hidden, `.is-visible` (added by the Reveal
@@ -197,6 +210,7 @@
     .animate-aurora,
     .animate-float,
     .animate-rise,
+    .animate-grow-bar,
     .text-sheen {
       animation: none !important;
     }
