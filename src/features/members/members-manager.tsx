@@ -2,11 +2,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Loader2, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Trash2, MailX, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
-  addMemberAction,
+  addOrInviteMemberAction,
   removeMemberAction,
+  revokeInvitationAction,
   updateMemberRoleAction,
 } from "./actions";
 import { ORG_ROLES, type OrgRole } from "@/lib/authorization/permissions";
@@ -56,13 +57,23 @@ interface Member {
   joinedAt: string | Date;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+  invitedByName: string | null;
+  createdAt: string | Date;
+}
+
 export function MembersManager({
   members,
+  pendingInvitations,
   currentUserId,
   actorRole,
   canManage,
 }: {
   members: Member[];
+  pendingInvitations: PendingInvitation[];
   currentUserId: string;
   actorRole: OrgRole;
   canManage: boolean;
@@ -76,6 +87,10 @@ export function MembersManager({
     <div className="space-y-6">
       {canManage && assignableRoles.length > 0 && (
         <AddMemberForm assignableRoles={assignableRoles} />
+      )}
+
+      {canManage && pendingInvitations.length > 0 && (
+        <PendingInvitations invitations={pendingInvitations} />
       )}
 
       <Card>
@@ -180,13 +195,21 @@ function AddMemberForm({ assignableRoles }: { assignableRoles: OrgRole[] }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const result = await addMemberAction({ email, role });
+    const result = await addOrInviteMemberAction({ email, role });
     setLoading(false);
     if (!result.ok) {
       toast.error(result.error.message);
       return;
     }
-    toast.success("Member added");
+    if (result.data.status === "added") {
+      toast.success(`${result.data.email} added to the organization`);
+    } else if (result.data.delivered) {
+      toast.success(`Invitation emailed to ${result.data.email}`);
+    } else {
+      toast.success(
+        `Invitation created for ${result.data.email} (email transport not configured — share the link from their invitation)`
+      );
+    }
     setEmail("");
     router.refresh();
   }
@@ -196,8 +219,8 @@ function AddMemberForm({ assignableRoles }: { assignableRoles: OrgRole[] }) {
       <CardHeader>
         <CardTitle className="text-base">Add a member</CardTitle>
         <CardDescription>
-          Add an existing account to this organization by email and assign a
-          role.
+          Enter an email and role. Existing users are added instantly; new
+          people are emailed an invitation to join.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -356,5 +379,99 @@ function RemoveMemberButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PendingInvitations({
+  invitations,
+}: {
+  invitations: PendingInvitation[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          Pending invitations ({invitations.length})
+        </CardTitle>
+        <CardDescription>
+          People who have been emailed an invite but haven&apos;t joined yet.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Invited</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invitations.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell className="font-medium">{inv.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{inv.role}</Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(new Date(inv.createdAt), "MMM d, yyyy")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <RevokeInvitationButton
+                      invitationId={inv.id}
+                      email={inv.email}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RevokeInvitationButton({
+  invitationId,
+  email,
+}: {
+  invitationId: string;
+  email: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+
+  function onRevoke() {
+    startTransition(async () => {
+      // revokeInvitation reuses the removeMember payload shape (id field).
+      const result = await revokeInvitationAction({ membershipId: invitationId });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Invitation revoked");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-destructive hover:text-destructive"
+      onClick={onRevoke}
+      disabled={pending}
+      aria-label={`Revoke invitation for ${email}`}
+    >
+      {pending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <MailX className="h-4 w-4" />
+      )}
+    </Button>
   );
 }

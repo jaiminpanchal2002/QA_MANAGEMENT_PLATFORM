@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Loader2, X } from "lucide-react";
@@ -30,11 +30,14 @@ import { cn } from "@/lib/utils";
 
 export function SignUpForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const invite = params.get("invite");
+  const prefillEmail = params.get("email") ?? "";
   const [error, setError] = React.useState<string | null>(null);
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     mode: "onChange",
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { name: "", email: prefillEmail, password: "" },
   });
   const password = form.watch("password");
 
@@ -50,7 +53,8 @@ export function SignUpForm() {
       return;
     }
     toast.success("Account created");
-    router.push("/onboarding");
+    // Return to the invitation to accept it; otherwise start onboarding.
+    router.push(invite ? `/invitations/${invite}` : "/onboarding");
     router.refresh();
   }
 
@@ -97,6 +101,7 @@ export function SignUpForm() {
                       type="email"
                       placeholder="you@company.com"
                       autoComplete="email"
+                      readOnly={Boolean(prefillEmail)}
                       {...field}
                     />
                   </FormControl>

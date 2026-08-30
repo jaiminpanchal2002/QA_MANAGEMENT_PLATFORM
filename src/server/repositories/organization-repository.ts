@@ -2,9 +2,11 @@ import "server-only";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  invitations,
   memberships,
   organizations,
   user,
+  type Invitation,
   type Membership,
   type Organization,
 } from "@/db/schema";
@@ -168,6 +170,121 @@ export async function countOwners(
     .from(memberships)
     .where(and(...conditions));
   return rows[0]?.count ?? 0;
+}
+
+/** A single organization by id (no membership check — callers scope access). */
+export async function getOrganizationById(
+  organizationId: string
+): Promise<Organization | null> {
+  const rows = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+// --- Invitations -----------------------------------------------------------
+
+export async function createInvitation(input: {
+  organizationId: string;
+  email: string;
+  role: OrgRole;
+  token: string;
+  invitedBy: string;
+  expiresAt: Date;
+}): Promise<Invitation> {
+  const [row] = await db
+    .insert(invitations)
+    .values({
+      organizationId: input.organizationId,
+      email: input.email,
+      role: input.role,
+      token: input.token,
+      invitedBy: input.invitedBy,
+      expiresAt: input.expiresAt,
+      status: "PENDING",
+    })
+    .returning();
+  return row!;
+}
+
+/** Resolve an invitation by its (secret) token — not org-scoped by design. */
+export async function getInvitationByToken(
+  token: string
+): Promise<Invitation | null> {
+  const rows = await db
+    .select()
+    .from(invitations)
+    .where(eq(invitations.token, token))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** A still-pending invitation for an email in an org, if any. */
+export async function getPendingInvitationByEmail(
+  organizationId: string,
+  email: string
+): Promise<Invitation | null> {
+  const rows = await db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.organizationId, organizationId),
+        eq(invitations.email, email),
+        eq(invitations.status, "PENDING")
+      )
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listPendingInvitations(organizationId: string) {
+  return db
+    .select({
+      id: invitations.id,
+      email: invitations.email,
+      role: invitations.role,
+      createdAt: invitations.createdAt,
+      expiresAt: invitations.expiresAt,
+      invitedByName: user.name,
+    })
+    .from(invitations)
+    .leftJoin(user, eq(invitations.invitedBy, user.id))
+    .where(
+      and(
+        eq(invitations.organizationId, organizationId),
+        eq(invitations.status, "PENDING")
+      )
+    )
+    .orderBy(invitations.createdAt);
+}
+
+export async function markInvitationAccepted(id: string): Promise<void> {
+  await db
+    .update(invitations)
+    .set({ status: "ACCEPTED", acceptedAt: new Date(), updatedAt: new Date() })
+    .where(eq(invitations.id, id));
+}
+
+/** Revoke a pending invitation (org-scoped). Returns false if not found. */
+export async function revokeInvitation(
+  organizationId: string,
+  id: string
+): Promise<boolean> {
+  const rows = await db
+    .update(invitations)
+    .set({ status: "REVOKED", updatedAt: new Date() })
+    .where(
+      and(
+        eq(invitations.id, id),
+        eq(invitations.organizationId, organizationId),
+        eq(invitations.status, "PENDING")
+      )
+    )
+    .returning({ id: invitations.id });
+  return rows.length > 0;
 }
 
 export async function getOrganizationForUser(

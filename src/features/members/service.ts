@@ -8,11 +8,7 @@ import type { OrgRole } from "@/lib/authorization/permissions";
 import { recordAudit } from "@/lib/audit/audit";
 import { Errors } from "@/lib/errors";
 import * as repo from "@/server/repositories/organization-repository";
-import {
-  addMemberSchema,
-  removeMemberSchema,
-  updateMemberRoleSchema,
-} from "./schema";
+import { removeMemberSchema, updateMemberRoleSchema } from "./schema";
 
 /** List members of the active organization (org.view is implicit for members). */
 export async function listMembersService() {
@@ -32,51 +28,6 @@ export async function listMembersService() {
     .orderBy(memberships.createdAt);
 
   return { members: rows, context: ctx };
-}
-
-/**
- * Add an existing user (looked up by email) to the active organization.
- *
- * Enforces, in order: manage-members permission → no privilege escalation
- * (you may only grant a role at/below your own) → the target account exists →
- * they are not already a member. Invitations for users without an account are
- * a separate flow (see the `invitations` table).
- */
-export async function addMemberService(input: unknown) {
-  const ctx = await requireOrgPermission("organization.manage_members");
-  const data = addMemberSchema.parse(input);
-
-  if (!canAssignOrgRole(ctx.orgRole, data.role)) {
-    throw Errors.forbidden(`You cannot assign the ${data.role} role`);
-  }
-
-  const target = await repo.findUserByEmail(data.email);
-  if (!target) {
-    throw Errors.notFound(
-      "No account uses that email. Ask them to sign up first, then add them."
-    );
-  }
-
-  if (await repo.membershipExists(ctx.organizationId, target.id)) {
-    throw Errors.conflict("That user is already a member of this organization");
-  }
-
-  const membership = await repo.addMembership({
-    organizationId: ctx.organizationId,
-    userId: target.id,
-    role: data.role,
-  });
-
-  await recordAudit({
-    organizationId: ctx.organizationId,
-    actorId: ctx.user.id,
-    action: "member.added",
-    entityType: "membership",
-    entityId: membership.id,
-    metadata: { email: target.email, role: data.role },
-  });
-
-  return { id: membership.id };
 }
 
 /**

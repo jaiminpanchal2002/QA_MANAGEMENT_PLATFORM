@@ -27,6 +27,17 @@ const serverSchema = z.object({
   BLOB_READ_WRITE_TOKEN: z.string().optional().default(""),
   RESEND_API_KEY: z.string().optional().default(""),
   EMAIL_FROM: z.string().optional().default("QA Platform <no-reply@example.com>"),
+  // SMTP (e.g. Gmail app password). When SMTP_HOST + SMTP_USER + SMTP_PASSWORD
+  // are all set, email is sent over SMTP; otherwise Resend, otherwise console.
+  SMTP_HOST: z.string().optional().default(""),
+  SMTP_PORT: z.coerce.number().int().positive().optional().default(587),
+  SMTP_USER: z.string().optional().default(""),
+  SMTP_PASSWORD: z.string().optional().default(""),
+  // "true" forces implicit TLS (port 465). Otherwise STARTTLS is used.
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
   INTEGRATION_WEBHOOK_SECRET: z
     .string()
     .min(16, "INTEGRATION_WEBHOOK_SECRET must be at least 16 characters")

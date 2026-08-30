@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { listMembersService } from "@/features/members/service";
+import { listPendingInvitationsService } from "@/features/members/invitations";
 import { MembersManager } from "@/features/members/members-manager";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,9 @@ export default async function SettingsPage() {
     { orgRole: context.orgRole },
     "organization.manage_members"
   );
+  const pendingInvitations = canManage
+    ? await listPendingInvitationsService()
+    : [];
 
   return (
     <div className="space-y-6">
@@ -43,6 +47,13 @@ export default async function SettingsPage() {
 
       <MembersManager
         members={members}
+        pendingInvitations={pendingInvitations.map((i) => ({
+          id: i.id,
+          email: i.email,
+          role: i.role,
+          invitedByName: i.invitedByName ?? null,
+          createdAt: i.createdAt,
+        }))}
         currentUserId={context.user.id}
         actorRole={context.orgRole}
         canManage={canManage}
