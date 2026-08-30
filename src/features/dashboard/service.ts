@@ -4,6 +4,8 @@ import { db } from "@/db";
 import {
   auditLogs,
   defects,
+  invitations,
+  memberships,
   projects,
   testCases,
   testExecutions,
@@ -25,6 +27,9 @@ export interface DashboardMetrics {
     automatedTestCases: number;
     automationCoverage: number;
     openDefects: number;
+    members: number;
+    pendingInvitations: number;
+    testRuns: number;
   };
   execution: {
     passed: number;
@@ -90,6 +95,9 @@ export async function getDashboardMetrics(
     trendRows,
     recentRuns,
     recentActivity,
+    memberCount,
+    pendingInvitationCount,
+    testRunCount,
   ] = await Promise.all([
     db.$count(
       projects,
@@ -163,6 +171,21 @@ export async function getDashboardMetrics(
       .where(eq(auditLogs.organizationId, orgId))
       .orderBy(desc(auditLogs.createdAt))
       .limit(8),
+    db.$count(memberships, eq(memberships.organizationId, orgId)),
+    db.$count(
+      invitations,
+      and(
+        eq(invitations.organizationId, orgId),
+        eq(invitations.status, "PENDING")
+      )
+    ),
+    db.$count(
+      testRuns,
+      and(
+        eq(testRuns.organizationId, orgId),
+        projectId ? eq(testRuns.projectId, projectId) : undefined
+      )
+    ),
   ]);
 
   void projScope;
@@ -184,6 +207,9 @@ export async function getDashboardMetrics(
       automatedTestCases: automatedCount,
       automationCoverage: percent(automatedCount, testCaseTotal),
       openDefects: openDefectCount,
+      members: memberCount,
+      pendingInvitations: pendingInvitationCount,
+      testRuns: testRunCount,
     },
     execution: {
       passed,

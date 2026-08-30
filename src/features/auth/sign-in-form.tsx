@@ -44,6 +44,16 @@ export function SignInForm() {
       password: values.password,
     });
     if (error) {
+      // Unverified accounts are blocked server-side — route them to verify.
+      const unverified =
+        error.status === 403 || /verif/i.test(error.message ?? "");
+      if (unverified) {
+        toast.info("Please verify your email to continue.");
+        router.push(
+          `/verify-email?email=${encodeURIComponent(values.email)}`
+        );
+        return;
+      }
       setError(error.message ?? "Invalid email or password");
       return;
     }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, CheckCircle2, Bug, Bot, FolderKanban } from "lucide-react";
 import { getReportsData } from "@/features/reports/service";
+import { ReportsToolbar } from "@/features/reports/reports-toolbar";
 import { PageHeader } from "@/components/shell/page-header";
 import { EmptyState } from "@/components/shell/empty-state";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -38,8 +39,14 @@ const EXEC_COLORS: Record<string, string> = {
   NOT_EXECUTED: "hsl(214 32% 80%)",
 };
 
-export default async function ReportsPage() {
-  const { metrics: m, projects } = await getReportsData();
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const { project: projectId } = await searchParams;
+  const { metrics: m, projects, allProjects, selectedProjectId, selectedProjectName } =
+    await getReportsData(projectId);
 
   const execDistribution = [
     { status: "PASSED", count: m.execution.passed },
@@ -53,7 +60,18 @@ export default async function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Reports"
-        description="Organization-wide QA reporting — coverage, execution and defects, computed live from your data."
+        description={
+          selectedProjectName
+            ? `Analytics for ${selectedProjectName} — coverage, execution and defects.`
+            : "QA analytics — coverage, execution and defects across your organization."
+        }
+        actions={
+          <ReportsToolbar
+            allProjects={allProjects}
+            selectedProjectId={selectedProjectId}
+            rows={projects}
+          />
+        }
       />
 
       {/* Headline KPIs */}

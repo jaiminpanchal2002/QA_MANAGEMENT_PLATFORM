@@ -25,7 +25,12 @@ export interface ProjectReportRow {
 
 export interface ReportsData {
   metrics: DashboardMetrics;
+  /** Rows for the table (filtered to the selected project when one is set). */
   projects: ProjectReportRow[];
+  /** All org projects, for the filter dropdown. */
+  allProjects: Array<{ id: string; name: string; key: string }>;
+  selectedProjectId: string | null;
+  selectedProjectName: string | null;
 }
 
 const EXECUTED_STATUSES = new Set(["PASSED", "FAILED", "BLOCKED", "SKIPPED"]);
@@ -34,13 +39,20 @@ const EXECUTED_STATUSES = new Set(["PASSED", "FAILED", "BLOCKED", "SKIPPED"]);
  * Organization-wide QA reporting: the same real aggregations the dashboard
  * uses, plus a per-project breakdown (coverage, execution, pass rate, open
  * defects) computed with grouped SQL — no per-project N+1 queries.
+ *
+ * When `projectId` is provided (drill-down), the headline metrics/charts are
+ * narrowed to that project and the table shows only that row. `projectId` is
+ * always org-scoped in the underlying queries, so a forged id can never surface
+ * another tenant's data.
  */
-export async function getReportsData(): Promise<ReportsData> {
+export async function getReportsData(
+  projectId?: string
+): Promise<ReportsData> {
   const ctx = await requireOrgContext();
   const orgId = ctx.organizationId;
 
   const [metrics, projectRows, tcRows, execRows, defRows] = await Promise.all([
-    getDashboardMetrics(),
+    getDashboardMetrics(projectId),
     db
       .select({ id: projects.id, name: projects.name, key: projects.key })
       .from(projects)
@@ -110,5 +122,20 @@ export async function getReportsData(): Promise<ReportsData> {
     };
   });
 
-  return { metrics, projects: projectReports };
+  const selected = projectId
+    ? projectReports.filter((p) => p.id === projectId)
+    : projectReports;
+
+  return {
+    metrics,
+    projects: selected,
+    allProjects: projectRows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      key: p.key,
+    })),
+    selectedProjectId: projectId ?? null,
+    selectedProjectName:
+      projectRows.find((p) => p.id === projectId)?.name ?? null,
+  };
 }

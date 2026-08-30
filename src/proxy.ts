@@ -14,7 +14,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * Edge runtime doesn't support. Checking for the session cookie by name keeps
  * the proxy pure and Edge-safe.
  */
-const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/reset-password", "/verify"];
+const PUBLIC_PREFIXES = [
+  "/sign-in",
+  "/sign-up",
+  "/reset-password",
+  "/verify-email",
+  "/verify",
+];
 
 // Better Auth default session cookie is "better-auth.session_token"; in
 // production (secure cookies) it is prefixed with "__Secure-".

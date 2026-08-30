@@ -52,7 +52,10 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    requireEmailVerification: false,
+    // Accounts must verify their email before they can sign in. Better Auth
+    // blocks sign-in for unverified users and (re)sends the verification mail,
+    // so this is enforced server-side — a client can't bypass it.
+    requireEmailVerification: true,
     async sendResetPassword({ user, url }) {
       await mailer.send({
         to: user.email,

@@ -47,14 +47,19 @@ export function SignUpForm() {
       name: values.name,
       email: values.email,
       password: values.password,
+      // Where the verification link lands after the email is confirmed.
+      callbackURL: invite ? `/invitations/${invite}` : "/dashboard",
     });
     if (error) {
       setError(error.message ?? "Could not create account");
       return;
     }
-    toast.success("Account created");
-    // Return to the invitation to accept it; otherwise start onboarding.
-    router.push(invite ? `/invitations/${invite}` : "/onboarding");
+    // Email verification is required — the account exists but is inactive
+    // until verified. Send them to the "check your email" screen.
+    toast.success("Account created — check your email to verify");
+    const q = new URLSearchParams({ email: values.email });
+    if (invite) q.set("invite", invite);
+    router.push(`/verify-email?${q.toString()}`);
     router.refresh();
   }
 
