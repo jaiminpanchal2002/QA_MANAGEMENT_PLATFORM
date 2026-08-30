@@ -204,7 +204,9 @@ function AddMemberForm({ assignableRoles }: { assignableRoles: OrgRole[] }) {
     if (result.data.status === "added") {
       toast.success(`${result.data.email} added to the organization`);
     } else if (result.data.delivered) {
-      toast.success(`Invitation emailed to ${result.data.email}`);
+      toast.success(
+        `Invitation emailed to ${result.data.email} — ask them to check their spam folder if it doesn't arrive`
+      );
     } else {
       toast.success(
         `Invitation created for ${result.data.email} (email transport not configured — share the link from their invitation)`

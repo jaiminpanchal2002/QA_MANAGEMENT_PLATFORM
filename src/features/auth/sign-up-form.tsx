@@ -56,7 +56,9 @@ export function SignUpForm() {
     }
     // Email verification is required — the account exists but is inactive
     // until verified. Send them to the "check your email" screen.
-    toast.success("Account created — check your email to verify");
+    toast.success(
+      "Account created — check your email (and spam folder) to verify"
+    );
     const q = new URLSearchParams({ email: values.email });
     if (invite) q.set("invite", invite);
     router.push(`/verify-email?${q.toString()}`);

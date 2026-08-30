@@ -46,7 +46,9 @@ export function VerifyEmailForm() {
       toast.error(error.message ?? "Could not send the email. Try again.");
       return;
     }
-    toast.success("Verification email sent");
+    toast.success(
+      "Verification email sent — check your spam folder if you don't see it."
+    );
     setCooldown(COOLDOWN_SECONDS);
   }
 

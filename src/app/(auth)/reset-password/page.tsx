@@ -40,7 +40,9 @@ export default function ResetPasswordPage() {
     });
     setLoading(false);
     setSent(true);
-    toast.success("If that email exists, a reset link is on its way.");
+    toast.success(
+      "If that email exists, a reset link is on its way. Check your spam folder if you don't see it."
+    );
   }
 
   return (
@@ -55,7 +57,8 @@ export default function ResetPasswordPage() {
         <CardContent className="space-y-4">
           {sent ? (
             <p className="rounded-md bg-secondary px-3 py-2 text-sm text-muted-foreground">
-              Check your inbox for a password reset link.
+              Check your inbox for a password reset link. It can take a minute
+              to arrive — if you don&apos;t see it, check your spam folder.
             </p>
           ) : (
             <div className="space-y-2">
